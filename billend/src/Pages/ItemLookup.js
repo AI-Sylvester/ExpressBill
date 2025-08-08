@@ -28,7 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useTheme } from '@mui/material/styles';
-import QrScanner from './Qrscanner'; // adjust path as needed
+import Scanner from './Scanner'; // adjust path as needed
 
 const ItemLookup = () => {
   const [barcode, setBarcode] = useState('');
@@ -36,7 +36,7 @@ const ItemLookup = () => {
   const [error, setError] = useState('');
   const [duplicateItem, setDuplicateItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showBill, setShowBill] = useState(true); // for mobile toggle
+  const [showBill, setShowBill] = useState(false); // for mobile toggle
 const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const inputRef = useRef();
   const theme = useTheme();
@@ -45,14 +45,13 @@ const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-const handleSearch = useCallback(async (scanned = null) => {
+const handleSearch = useCallback(async (scanned = null, shouldFocus = true) => {
   const code = scanned || barcode.trim();
   if (!code) return;
 
   setLoading(true);
   try {
-    const response = await axios.get(`http://192.168.1.24:8000/item/${code}`);
-
+    const response = await axios.get(`https://onlineexpress.onrender.com/api/item/${code}`);
     const newItem = { ...response.data, qty: 1 };
 
     const exists = items.find(item => item.barcode === newItem.barcode);
@@ -68,9 +67,11 @@ const handleSearch = useCallback(async (scanned = null) => {
   } finally {
     setLoading(false);
     setBarcode('');
-    inputRef.current?.focus();
+    if (shouldFocus) {
+      inputRef.current?.focus(); // Only focus if manually entered
+    }
   }
-}, [barcode, items]); // 👈 Add dependencies carefully
+}, [barcode, items]);
 const handleClearAll = () => {
   setItems([]); // Clear all rows
   setClearConfirmOpen(false); // Close dialog
@@ -109,7 +110,7 @@ const handleScan = useCallback((result) => {
     ? result.text
     : '';
 
-  if (code) handleSearch(code);
+  if (code) handleSearch(code, false);  // scan input -> no focus
 }, [handleSearch]);
   const handleQtyCancel = () => setDuplicateItem(null);
 
@@ -141,7 +142,7 @@ const handleScan = useCallback((result) => {
       letterSpacing: '0.8px',
     }}
   >
-    Billing
+    ExpressBilling
   </Typography>
 
    <IconButton
@@ -184,62 +185,39 @@ const handleScan = useCallback((result) => {
       }}
     >
       <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-<Typography
-  variant="subtitle1" // smaller than h6
-  align="center"
-  sx={{
-    backgroundColor: '#e53935',  // Red background
-    color: '#ffffff',            // White text
-    py: 0.5,                     // Less vertical padding
-    px: 1.5,
-    fontWeight: 400,
-    borderRadius: 1,
-    fontSize: '14px',            // Fine-tuned size
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-    width: '95%',
-  }}
->
-  QR / Barcode
-</Typography>
-    {/* QR Scanner - Shown First in Mobile */}
-   <Box display={isMobile ? 'block' : 'none'}>
+
   
-        <Typography variant="subtitle2" color="textSecondary" mb={1}>
-          QR Scanner
-        </Typography>
-<QrScanner onScan={handleScan} />
-
-      </Box>
-  
-
-    {/* Barcode input and Add button */}
-    <TextField
-      inputRef={inputRef}
-      label="Barcode"
-      value={barcode}
-      onChange={(e) => setBarcode(e.target.value)}
-      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-      fullWidth
-      variant="outlined"
-      sx={{ my: 2 }}
-    />
-
-   <Button
-  variant="contained"
-  fullWidth
-  onClick={handleSearch}
-  disabled={loading}
-  sx={{
-    backgroundColor: '#4caf50', // MUI green
-    color: '#ffffff',
-    '&:hover': {
-      backgroundColor: '#388e3c', // Darker green on hover
-    },
-    fontWeight: 'bold',
-  }}
+<form
+ onSubmit={(e) => {
+  e.preventDefault();
+  handleSearch(null, true);  // manual input -> focus
+}}
 >
-  {loading ? <CircularProgress size={24} color="inherit" /> : 'Add Item'}
-</Button>
+  <TextField
+    inputRef={inputRef}
+    label="Barcode"
+    value={barcode}
+    onChange={(e) => setBarcode(e.target.value)}
+    fullWidth
+    variant="outlined"
+    sx={{ my: 2 }}
+  />
+
+  <Button
+    type="submit"
+    variant="contained"
+    fullWidth
+    disabled={loading}
+    sx={{
+      backgroundColor: '#4caf50',
+      color: '#ffffff',
+      '&:hover': { backgroundColor: '#388e3c' },
+      fontWeight: 'bold',
+    }}
+  >
+    {loading ? <CircularProgress size={24} color="inherit" /> : 'Add Item'}
+  </Button>
+</form>
 
     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
@@ -272,7 +250,30 @@ const handleScan = useCallback((result) => {
     ₹ {totalAmount.toFixed(2)}
   </Typography>
 </Box>
+<Typography
+  variant="subtitle1" // smaller than h6
+  align="center"
+  sx={{
+    backgroundColor: '#160606ff', 
+    mt:2, // Red background
+    color: '#ffffff',            // White text
+    py: 0.5,                     // Less vertical padding
+    px: 1.5,
+    fontWeight: 400,
+    borderRadius: 1,
+    fontSize: '14px',            // Fine-tuned size
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    width: '95%',
+  }}
+>
+  QR / Barcode
+</Typography>
+    {/* QR Scanner - Shown First in Mobile */}
+   <Box display={isMobile ? 'block' : 'none'}>
+  
+ <Scanner onScan={handleScan} />
 
+      </Box>
 
       
     
@@ -311,12 +312,12 @@ const handleScan = useCallback((result) => {
 <Table size="small" sx={{ fontSize: '12px' }}>
   <TableHead sx={{ backgroundColor: '#d3d4d0ff' }}>
     <TableRow>
-      <TableCell sx={{ fontSize: '12px', padding: '6px' }}><strong>Barcode</strong></TableCell>
-      <TableCell sx={{ fontSize: '12px', padding: '6px' }}><strong>Particulars</strong></TableCell>
+      <TableCell sx={{ fontSize: '12px', padding: '6px' }}><strong>Code</strong></TableCell>
+      <TableCell sx={{ fontSize: '12px', padding: '6px' }}><strong>Item</strong></TableCell>
       <TableCell sx={{ fontSize: '12px', padding: '6px' }} align="right"><strong>Rate</strong></TableCell>
       <TableCell sx={{ fontSize: '12px', padding: '6px' }} align="right"><strong>Qty</strong></TableCell>
       <TableCell sx={{ fontSize: '12px', padding: '6px' }} align="right"><strong>Amount</strong></TableCell>
-      <TableCell sx={{ fontSize: '12px', padding: '6px' }} align="center"><strong>Action</strong></TableCell>
+      <TableCell sx={{ fontSize: '12px', padding: '6px' }} align="center"><strong>X</strong></TableCell>
     </TableRow>
   </TableHead>
 
