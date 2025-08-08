@@ -266,7 +266,7 @@ const handleScan = useCallback((result) => {
     width: '95%',
   }}
 >
-  QR / Barcode
+ Scan Code
 </Typography>
     {/* QR Scanner - Shown First in Mobile */}
    <Box display={isMobile ? 'block' : 'none'}>
